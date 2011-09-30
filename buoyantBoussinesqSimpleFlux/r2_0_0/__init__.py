@@ -100,10 +100,9 @@ def createFields( runTime, mesh, g ):
   turbulence = man.incompressible.RASModel.New(U, phi, laminarTransport)
 
   # Kinematic density for buoyancy force
-  field = 1.0 - beta * ( T() - TRef )
   rhok = man.volScalarField( man.IOobject( word( "rhok" ),
                                            fileName( runTime.timeName() ),
-                                           mesh ), man.volScalarField( field, T ) )
+                                           mesh ), man( 1.0 - beta * ( T() - TRef ), man.Deps( T ) ) )
   
   # kinematic turbulent thermal thermal conductivity m2/s
   ext_Info() << "Reading field kappat\n" << nl
@@ -114,10 +113,9 @@ def createFields( runTime, mesh, g ):
                                              IOobject.AUTO_WRITE ), mesh )
 
   ext_Info() << "Calculating field g.h\n" << nl
-  field = g & mesh.C()
-  gh = man.volScalarField( word( "gh" ), man.volScalarField( field, mesh ) )
-  field = g & mesh.Cf()
-  ghf = man.surfaceScalarField( word( "ghf" ), man.surfaceScalarField( field, mesh ) )
+  gh = man.volScalarField( word( "gh" ), man( g & mesh.C(), man.Deps( mesh ) ) )
+  
+  ghf = man.surfaceScalarField( word( "ghf" ), man( g & mesh.Cf(), man.Deps( mesh ) ) )
 
   p = man.volScalarField( man.IOobject( word( "p" ),
                                         fileName( runTime.timeName() ),
@@ -142,10 +140,10 @@ def createFields( runTime, mesh, g ):
 
 #---------------------------------------------------------------------------
 def fun_UEqn( mesh, simple, U, phi, turbulence, p, rhok, p_rgh, ghf ):
+   
+  UEqn = man.fvm.div(phi, U) + man( turbulence.divDevReff( U ) , man.Deps( U ) ) 
 
-  UEqn = man.fvm.div(phi, U) + man.fvVectorMatrix( turbulence.divDevReff( U() ), man.Deps( turbulence, U ) ) 
-
-  UEqn().relax();
+  UEqn.relax()
 
   if  simple.momentumPredictor():
     from Foam.finiteVolume import solve

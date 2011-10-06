@@ -123,7 +123,7 @@ def createFields( runTime, mesh, g ):
   pRefCell, pRefValue = ref.setRefCell( p, p_rgh, mesh.solutionDict().subDict( ref.word( "SIMPLE" ) ), pRefCell, pRefValue )
 
   if p_rgh.needReference():
-    p().ext_assign( p() + ref.dimensionedScalar( ref.word( "p" ),p.dimensions(), pRefValue - ref.getRefCellValue( p, pRefCell ) ) )
+    p += ref.dimensionedScalar( ref.word( "p" ),p.dimensions(), pRefValue - ref.getRefCellValue( p, pRefCell ) )
     pass
   
   return T, p_rgh, U, phi, laminarTransport, turbulence, rhok, kappat, gh, ghf, p, pRefCell, pRefValue, beta, TRef, Pr, Prt
@@ -145,7 +145,7 @@ def fun_UEqn( mesh, simple, U, phi, turbulence, p, rhok, p_rgh, ghf ):
 #---------------------------------------------------------------------------
 def fun_TEqn( phi, turbulence, kappat, T, rhok, beta, TRef, Prt, Pr ):
   
-  kappat().ext_assign( turbulence.ext_nut() / Prt )
+  kappat <<= turbulence.ext_nut() / Prt
   
   kappat.correctBoundaryConditions()
   
@@ -155,7 +155,7 @@ def fun_TEqn( phi, turbulence, kappat, T, rhok, beta, TRef, Prt, Pr ):
   TEqn.relax()
   TEqn.solve()
 
-  rhok().ext_assign( 1.0 - beta * ( T() - TRef ) )
+  rhok <<= 1.0 - beta * ( T() - TRef )
   pass
 
 
@@ -166,14 +166,14 @@ def fun_pEqn( mesh, runTime, simple, p, rhok, U, phi, turbulence, gh, ghf, p_rgh
   
   rAUf = ref.surfaceScalarField( ref.word( "(1|A(U))" ), ref.fvc.interpolate( rAU ) )
 
-  U().ext_assign( rAU * UEqn.H() )
+  U <<= rAU * UEqn.H()
 
-  phi().ext_assign( ref.fvc.interpolate( U ) & mesh.Sf() )
+  phi <<= ref.fvc.interpolate( U ) & mesh.Sf()
 
   ref.adjustPhi( phi, U, p_rgh );
 
   buoyancyPhi = rAUf * ghf() * ref.fvc.snGrad( rhok ) * mesh.magSf()
-  phi().ext_assign( phi() - buoyancyPhi )
+  phi -= buoyancyPhi
 
   for nonOrth in range( simple.nNonOrthCorr() + 1 ):
     p_rghEqn = ref.fvm.laplacian( rAUf, p_rgh ) == ref.fvc.div( phi )
@@ -184,25 +184,25 @@ def fun_pEqn( mesh, runTime, simple, p, rhok, U, phi, turbulence, gh, ghf, p_rgh
 
     if nonOrth == simple.nNonOrthCorr():
       # Calculate the conservative fluxes
-      phi().ext_assign( phi() - p_rghEqn.flux() )
+      phi -= p_rghEqn.flux()
       
       # Explicitly relax pressure for momentum corrector
       p_rgh.relax()
 
       # Correct the momentum source with the pressure gradient flux
       # calculated from the relaxed pressure
-      U().ext_assign( U() - rAU * ref.fvc.reconstruct( ( buoyancyPhi + p_rghEqn.flux() ) / rAUf ) )
+      U -= rAU * ref.fvc.reconstruct( ( buoyancyPhi + p_rghEqn.flux() ) / rAUf )
       U.correctBoundaryConditions()
       pass
     pass
 
   cumulativeContErr = ref.ContinuityErrs( phi, runTime, mesh, cumulativeContErr )
 
-  p.ext_assign( p_rgh + rhok * gh )
+  p <<= p_rgh + rhok * gh
 
   if p_rgh.needReference():
-    p().ext_assign( p() + ref.dimensionedScalar( ref.word( "p" ), p.dimensions(), pRefValue - ref.getRefCellValue( p, pRefCell ) ) )
-    p_rgh.ext_assign( p - rhok * gh )
+    p += ref.dimensionedScalar( ref.word( "p" ), p.dimensions(), pRefValue - ref.getRefCellValue( p, pRefCell ) )
+    p_rgh <<= p - rhok * gh
     pass
   
   return cumulativeContErr

@@ -145,7 +145,7 @@ def fun_UEqn( mesh, simple, U, phi, turbulence, p, rhok, p_rgh, ghf ):
 #---------------------------------------------------------------------------
 def fun_TEqn( phi, turbulence, kappat, T, rhok, beta, TRef, Prt, Pr ):
   
-  kappat <<= turbulence.ext_nut() / Prt
+  kappat << turbulence.ext_nut() / Prt
   
   kappat.correctBoundaryConditions()
   
@@ -155,7 +155,7 @@ def fun_TEqn( phi, turbulence, kappat, T, rhok, beta, TRef, Prt, Pr ):
   TEqn.relax()
   TEqn.solve()
 
-  rhok <<= 1.0 - beta * ( T() - TRef )
+  rhok << 1.0 - beta * ( T() - TRef )
   pass
 
 
@@ -166,9 +166,9 @@ def fun_pEqn( mesh, runTime, simple, p, rhok, U, phi, turbulence, gh, ghf, p_rgh
   
   rAUf = ref.surfaceScalarField( ref.word( "(1|A(U))" ), ref.fvc.interpolate( rAU ) )
 
-  U <<= rAU * UEqn.H()
+  U << rAU * UEqn.H()
 
-  phi <<= ref.fvc.interpolate( U ) & mesh.Sf()
+  phi << ( ref.fvc.interpolate( U ) & mesh.Sf() )
 
   ref.adjustPhi( phi, U, p_rgh );
 
@@ -198,11 +198,11 @@ def fun_pEqn( mesh, runTime, simple, p, rhok, U, phi, turbulence, gh, ghf, p_rgh
 
   cumulativeContErr = ref.ContinuityErrs( phi, runTime, mesh, cumulativeContErr )
 
-  p <<= p_rgh + rhok * gh
+  p << p_rgh + rhok * gh
 
   if p_rgh.needReference():
     p += ref.dimensionedScalar( ref.word( "p" ), p.dimensions(), pRefValue - ref.getRefCellValue( p, pRefCell ) )
-    p_rgh <<= p - rhok * gh
+    p_rgh << p - rhok * gh
     pass
   
   return cumulativeContErr

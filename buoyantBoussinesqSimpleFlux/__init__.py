@@ -55,6 +55,11 @@ if FOAM_REF_VERSION( ">=", "020000" ):
     pass
 
 #--------------------------------------------------------------------------------------
+if FOAM_REF_VERSION( ">=", "020100" ):
+    from buoyantBoussinesqSimpleFlux.r2_1_0 import *
+    pass
+
+#--------------------------------------------------------------------------------------
 def entry_point():
     try:
        engine = main_standalone
